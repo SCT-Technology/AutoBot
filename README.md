@@ -18,3 +18,8 @@ A plugin for MCDR to spawn BOT/BOTS
 	!!bot kill <BOT名字/BOT组名字> -下线BOT/BOT组
 -----------------------------------------------------------------------------------------
 注:删除BOT组会将组内所有BOT删除。
+# 文件架构：
+	./AutoBot//:
+		group//:
+			eachgroup//
+		eachbots.json
