@@ -1,6 +1,7 @@
 # AutoBot
 A plugin for MCDR to spawn BOT/BOTS
 用来生成BOT或批量生成BOT的插件
+!!Carpet模组需要并且打开commandPlayer!!
 -----------------------------------------------------------------------------------------
 	!!bot -显示帮助消息
 	!!bot add <BOT名字> <X坐标> <Y坐标> <Z坐标> <世界> <备注> -添加BOT到BOT列表
