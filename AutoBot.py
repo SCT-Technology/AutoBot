@@ -97,14 +97,14 @@ def on_info(server, info):
                 name = cmdList[2]
                 if cmdLen == 4:
                     detail = cmdList[3]
+                if name in getGroupList():
+                    server.reply(info, '已存在该组， 添加失败')
                 if cmdLen == 3 and name not in getGroupList():
                     addGroup(name)
                     server.reply(info, 'BOT组:' + name + '建立成功')
                 if cmdLen == 4 and name not in getGroupList():
                     addFullGroup(name, detail)
                     server.reply(info, 'BOT组:' + name + '建立成功')
-                if name in getGroupList():
-                    server.reply(info, '已存在该组， 添加失败')
             if cmdLen == 3 and cmdList[1] == 'delgroup':
                 name = cmdList[2]
                 if name in getGroupList():
@@ -189,6 +189,7 @@ def spawnGroupBot(name, server):
         cmdSpawnBot = 'player ' + name + ' spawn at ' + pos + ' facing ~ ~ in ' + world
         server.execute(cmdSpawnBot)
         server.say('BOT:' + name + '已经部署')
+    server.say('BOTz组:' + groupName + '已经部署')
 
 
 def killBot(name, server):
@@ -322,12 +323,15 @@ def botNameCheck(name):
 
 
 def posCheck(posX, posY, posZ):
-    try:
-        a = int(posX)
-        a = int(posY)
-        a = int(posZ)
-        return True
-    except ValueError:
+    if (posX.find('+') != -1) and (posY.find('+') != -1) and (posZ.find('+') != -1):
+        try:
+            a = int(posX)
+            a = int(posY)
+            a = int(posZ)
+            return True
+        except ValueError:
+            return False
+    else:
         return False
 
 
