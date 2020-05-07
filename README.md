@@ -1,4 +1,4 @@
-# AutoBot
+# AutoBot -仅在Win10通过测试！-
 A plugin for MCDR to spawn BOT/BOTS
 用来生成BOT或批量生成BOT的插件
 !!Carpet模组需要并且打开commandPlayer!!
