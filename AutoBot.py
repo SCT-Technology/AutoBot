@@ -168,6 +168,14 @@ def on_load(server, old_module):
         os.mkdir(AutoBotGroupFolder)
 
 
+def on_server_startup(server):
+    if 'peace' in getGroupList() and 'p_main' in getGroupList():
+        spawnGroupBot('peace', server)
+        spawnGroupBot('p_main', server)
+    else:
+        pass
+
+
 def spawnBot(name, server):
     botInfo = getBotInfo(name)
     name = botInfo['name']
@@ -323,7 +331,6 @@ def botNameCheck(name):
 
 
 def posCheck(posX, posY, posZ):
-    if (posX.find('+') != -1) and (posY.find('+') != -1) and (posZ.find('+') != -1):
         try:
             a = int(posX)
             a = int(posY)
@@ -331,8 +338,6 @@ def posCheck(posX, posY, posZ):
             return True
         except ValueError:
             return False
-    else:
-        return False
 
 
 def worldCheck(world):
