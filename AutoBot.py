@@ -197,7 +197,7 @@ def spawnGroupBot(name, server):
         cmdSpawnBot = 'player ' + name + ' spawn at ' + pos + ' facing ~ ~ in ' + world
         server.execute(cmdSpawnBot)
         server.say('BOT:' + name + '已经部署')
-    server.say('BOTz组:' + groupName + '已经部署')
+    server.say('BOT组:' + groupName + '已经部署')
 
 
 def killBot(name, server):
