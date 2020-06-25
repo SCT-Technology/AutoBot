@@ -1,31 +1,346 @@
-# -*- coding: utf-8 -*-
+# coding: utf8
 import json
 import os
 import shutil
+import pathlib
 
-helpmsg = '''------MCDR AutoBot插件------
-命令帮助如下:
-!!bot -显示帮助消息
-!!bot add <BOT名字> <X坐标> <Y坐标> <Z坐标> <世界> <备注> -添加BOT到BOT列表
-注：名字必须为bot_, farm_, p_, 开头, 坐标为整数，世界为overworld, nether, end, 三者之一
-!!bot del <BOT名字>
-!!bot radd -覆盖已有BOT 参数需完全覆盖
-!!bot addgroup <组名字> <备注>-添加BOT组
-!!bot delgroup <组名字> -移除BOT组
-!!bot gadd <BOT名字> <组名字> -添加BOT至BOT组
-!!bot gdel <BOT名字> <组名字> -从BOT组移除BOT
-!!bot list -查看可部署的BOT列表
-!!bot glist -查看可部署的BOT组列表
-!!bot info <BOT名字/BOT组名字> -查看BOT/BOT组信息
-!!bot <BOT名字/BOT组名字> -部署BOT/BOT组
-!!bot kill <BOT名字/BOT组名字> -下线BOT/BOT组
---------------------------------'''
+# Only tested on Win10!
+# Carpet Mod needed and function CommandPlayer must be on!
+# Author: MercyNaima
 
-
+botPrefix = ['bot', 'farm', 'peace', 'p']
 AutoBotFolder = './AutoBot'
 AutoBotGroupFolder = AutoBotFolder + '\\group'
+PluginPrefix = '§d[AutoBot]§r'
 
 
+helpmsg = '''§d------MCDR [AutoBot]插件------§r
+命令帮助如下:
+§d!!bot§r -§e显示帮助消息
+§d!!bot§r §aadd§r §8<BOT名字> <X坐标> <Y坐标> <Z坐标> <世界> <备注> -§e添加BOT到BOT列表§r
+注：名字必须为bot_, farm_, p_, 开头, 坐标为整数，世界为overworld, nether, end, 三者之一
+§d!!bot§r §adel§r §8<BOT名字>§r -§e从BOT列表删除BOT§r
+§d!!bot§r §arename§r §8<BOT名字/BOT组名字> <目标名字>§r -§e重命名BOT/BOT组§r
+§d!!bot§r §aaddgroup§r §8<BOT组名字>§r -§e添加BOT组§r
+§d!!bot§r §adelgroup§r §8<BOT组名字>§r -§e移除BOT组§r
+§d!!bot§r §agadd§r §8<BOT名字> <BOT组名字>§r -§e添加BOT至BOT组§r
+§d!!bot§r §agdel§r §8<BOT名字> <BOT组名字>§r -§e从BOT组移除BOT§r
+§d!!bot§r §alist§r §8<组名字> (可选变量)§r -§e查看可部署的BOT列表/查看组内BOT列表§r
+§d!!bot§r §aglist§r -§e查看可部署的BOT组列表§r
+§d!!bot§r §ainfo§r §8<BOT名字>/<BOT组名字> <BOT名字>§r -§e查看BOT/BOT组信息§r
+§d!!bot§r §8<BOT名字/BOT组名字>§r -§e部署BOT/BOT组§r
+§d!!bot§r §akill§r §8<BOT名字/BOT组名字>§r -§e下线BOT/BOT组§r
+§d--------------------------------§r'''
+
+
+# get BotList with .json
+def getBotListJson():
+    botListJson = os.listdir(AutoBotFolder)
+    # remove group folder
+    botListJson.remove('group')
+    return botListJson
+
+
+# get BotList without .json
+def getBotList():
+    botList = []
+    list = os.listdir(AutoBotFolder)
+    # remove group folder
+    list.remove('group')
+    for var in list:
+        botName = var.split('.', 1)[0]
+        botList.append(botName)
+    return botList
+
+
+# get GroupList
+def getGroupList():
+    return os.listdir(AutoBotGroupFolder)
+
+
+# get BotList in group without .json
+def getBotListInGroup(groupName):
+    botList = []
+    list = os.listdir('{}\\{}'.format(AutoBotGroupFolder, groupName))
+    for var in list:
+        if var == 'info.json':
+            pass
+        else:
+            botName = var.split('.', 1)[0]
+            botList.append(botName)
+    return botList
+
+
+# get BotList in group with .json
+def getBotListInGroupJson(groupName):
+    botListJson = os.listdir('{}\\{}'.format(AutoBotGroupFolder, groupName))
+    return botListJson
+
+
+# print botList in game
+def printBotList(server, info):
+    server.reply(info, '{}BOT列表如下:'.format(PluginPrefix))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+    for var in getBotList():
+        server.reply(info, '{}{}'.format(PluginPrefix, var))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+
+
+# print groupList in game
+def printGroupList(server, info):
+    server.reply(info, '{}BOT组列表如下:'.format(PluginPrefix))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+    for var in getGroupList():
+        server.reply(info, '{}{}'.format(PluginPrefix, var))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+
+
+# print botList in game
+def printBotListInGroup(groupName, server, info):
+    server.reply(info, '{}BOT组:{}中BOT列表如下:'.format(PluginPrefix, groupName))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+    for var in getBotListInGroup(groupName):
+        server.reply(info, '{}{}'.format(PluginPrefix, var))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+
+
+# print botInfo in game
+def printBotInfo(botName, server, info):
+    botInfo = getBotInfo(botName)
+    server.reply(info, '{}BOT信息如下:'.format(PluginPrefix))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+    server.reply(info, '{}{}'.format(PluginPrefix, str(botInfo)))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+
+
+# print botInfo in game (bot is in group)
+def printGroupBotInfo(groupName, botName, server, info):
+    botInfo = getGroupBotInfo(groupName, botName)
+    server.reply(info, '{}BOT信息如下:'.format(PluginPrefix))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+    server.reply(info, '{}{}'.format(PluginPrefix, str(botInfo)))
+    server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
+
+
+# bot name check
+def botNameCheck(botName, server, info):
+    namePrefix = botName.split('_', 1)[0]
+    if botName.find('_') == -1 or botName.find('.') != -1:
+        server.reply(info, '{}BOT名字格式错误'.format(PluginPrefix))
+        return False
+    if namePrefix not in botPrefix:
+        server.reply(info, '{}BOT名字格式错误'.format(PluginPrefix))
+        return False
+    return True
+
+
+# bot pos check
+def botPosCheck(posX, posY, posZ, server, info):
+    if posX.find('+') != -1 or posY.find('+') != -1 or posZ.find('+') != -1:
+        server.reply(info, '{}BOT坐标格式错误'.format(PluginPrefix))
+        return False
+    try:
+        int(posX)
+        int(posY)
+        int(posZ)
+    except ValueError:
+        server.reply(info, '{}BOT坐标格式错误'.format(PluginPrefix))
+        return False
+    return True
+
+
+# bot world check
+def botWorldCheck(world, server, info):
+    if world != 'overworld' and world != 'nether' and world != 'end':
+        server.reply(info, '{}BOT世界格式错误'.format(PluginPrefix))
+        return False
+    return True
+
+
+# bot format check
+def addBotCheck(botName, posX, posY, posZ, world, server, info):
+    # name check
+    if botNameCheck(botName, server, info):
+        # pos check
+        if botPosCheck(posX, posY, posZ, server, info):
+            # world check
+            if botWorldCheck(world, server, info):
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+
+
+# add bot to AutoBotFolder and return a dict with botInfo
+def addBot(botName, pos, world, detail, server, info):
+    if botName in getBotList():
+        server.reply(info, '{}已存在该BOT'.format(PluginPrefix))
+        return
+    # change world name to full world name
+    if world == 'overworld':
+        world = 'minecraft:' + world
+    elif world == 'nether' or 'end':
+        world = 'minecraft:the_' + world
+    # create botName.json to store bots
+    dict = {'name': botName, 'pos': pos, 'world': world, 'detail': detail}
+    with pathlib.Path('{}\\{}.json'.format(AutoBotFolder, botName)).open('w') as f:
+        f.write(json.dumps(dict))
+    server.reply(info, '{}BOT:{}添加成功'.format(PluginPrefix, botName))
+    return dict
+
+
+# add a group to AutoBotGroupFolder
+def addGroup(groupName, server, info):
+    try:
+        pathlib.Path('{}\\{}'.format(AutoBotGroupFolder, groupName)).mkdir()
+        server.reply(info, '{}BOT组:{}创建成功'.format(PluginPrefix, groupName))
+    except FileExistsError:
+        server.reply(info, '{}已存在BOT组:{}'.format(PluginPrefix, groupName))
+        return
+
+
+# add a bot to group
+def addBotToGroup(botName, groupName, server, info):
+    if botName not in getBotList():
+        server.reply(info, '{}未找到该BOT'.format(PluginPrefix))
+        return
+    if groupName not in getGroupList():
+        server.reply(info, '{}未找到该BOT组'.format(PluginPrefix))
+        return
+    shutil.move('{}\\{}.json'.format(AutoBotFolder, botName), '{}\\{}\\'.format(AutoBotGroupFolder, groupName))
+    server.reply(info, '{}已将BOT:{}移动至组:{}'.format(PluginPrefix, botName, groupName))
+
+
+# del bot from AutoBotFolder
+def delBot(botName, server, info):
+    try:
+        pathlib.Path('{}\\{}.json'.format(AutoBotFolder, botName)).unlink()
+        server.reply(info, '{}BOT:{}删除成功'.format(PluginPrefix, botName))
+    except FileNotFoundError:
+        server.reply(info, '{}未找到该BOT'.format(PluginPrefix))
+        return
+
+
+# del group from AutoBotGroupFolder
+def delGroup(groupName, server, info):
+    try:
+        shutil.rmtree('{}\\{}'.format(AutoBotGroupFolder, groupName))
+        server.reply(info, '{}BOT组:{}删除成功'.format(PluginPrefix, groupName))
+    except FileNotFoundError:
+        server.reply(info, '{}未找到BOT组:{}'.format(PluginPrefix, groupName))
+
+
+# del bot from group
+def delBotFromGroup(botName, groupName, server, info):
+    if groupName not in getGroupList():
+        server.reply(info, '{}未找到该BOT组'.format(PluginPrefix))
+        return
+    if botName not in getBotListInGroup(groupName):
+        server.reply(info, '{}未找到该BOT'.format(PluginPrefix))
+        return
+    shutil.move('{}\\{}\\{}.json'.format(AutoBotGroupFolder, groupName, botName), '{}\\'.format(AutoBotFolder))
+    server.reply(info, '{}已将BOT:{}从组:{}移除'.format(PluginPrefix, botName, groupName))
+
+
+# rename a group which in AutoBotGroupFolder
+def renameGroup(originGroupName, targetGroupName, server, info):
+    if targetGroupName in getGroupList():
+        server.reply(info, '{}该BOT组名字已经存在'.format(PluginPrefix))
+        return
+    try:
+        os.rename('{}\\{}'.format(AutoBotGroupFolder, originGroupName),
+                  '{}\\{}'.format(AutoBotGroupFolder, targetGroupName))
+        server.reply(info, '{}已将BOT组:{}重命名为:{}'.format(PluginPrefix, originGroupName, targetGroupName))
+    except OSError:
+        server.reply(info, '{}该BOT组不存在'.format(PluginPrefix))
+
+
+# rename a bot which in AutoBotFolder
+def renameBot(originBotName, targetBotName, server, info):
+    if targetBotName in getBotList():
+        server.reply(info, '{}该BOT名字已经存在'.format(PluginPrefix))
+        return
+    if not botNameCheck(targetBotName, server, info):
+        return
+    newBot = getBotInfo(originBotName)
+    newBot['name'] = targetBotName
+    with pathlib.Path('{}\\{}.json'.format(AutoBotFolder, targetBotName)).open('w') as f:
+        f.write(json.dumps(newBot))
+    pathlib.Path('{}\\{}.json'.format(AutoBotFolder, originBotName)).unlink()
+    server.reply(info, '{}已将BOT:{}重命名为:{}'.format(PluginPrefix, originBotName, targetBotName))
+
+
+# return a dict with botInfo
+def getBotInfo(botName):
+    with pathlib.Path('{}\\{}.json'.format(AutoBotFolder, botName)).open('r') as f:
+        botInfo = json.loads(f.read())
+        return botInfo
+
+
+# return a dict with botInfo (bot is in group)
+def getGroupBotInfo(groupName, botName):
+    with pathlib.Path('{}\\{}\\{}.json'.format(AutoBotGroupFolder, groupName, botName)).open('r') as f:
+        botInfo = json.loads(f.read())
+        return botInfo
+
+
+# return a list with dict of all bot info (bot is in group)
+def getGroupAllBotInfo(groupName):
+    allBotInfo = []
+    for var in getBotListInGroup(groupName):
+        allBotInfo.append(getGroupBotInfo(groupName, var))
+    return allBotInfo
+
+
+# spawn a bot in game
+def spawnBot(botName, server):
+    botInfo = getBotInfo(botName)
+    server.execute('player {} spawn at {} facing ~ ~ in {}'.format(botInfo['name'], botInfo['pos'], botInfo['world']))
+    server.say('{}BOT:{}已经部署'.format(PluginPrefix, botName))
+
+
+# spawn a group of bot in game
+def spawnGroupBot(groupName, server):
+    if len(getBotListInGroup(groupName)) == 0:
+        server.say('{}BOT组:{}内无BOT'.format(PluginPrefix, groupName))
+        return
+    for var in getGroupAllBotInfo(groupName):
+        server.execute('player {} spawn at {} facing ~ ~ in {}'.format(var['name'], var['pos'], var['world']))
+        server.say('{}BOT:{}已经部署'.format(PluginPrefix, var['name']))
+    server.say('{}BOT组:{}已经部署'.format(PluginPrefix, groupName))
+
+
+# kill a bot in game
+def killBot(botName, server):
+    server.execute('player {} kill'.format(botName))
+    server.say('{}BOT:{}已经下线'.format(PluginPrefix, botName))
+
+
+# kill a group of bot in game
+def killGroupBot(groupName, server):
+    if len(getBotListInGroup(groupName)) == 0:
+        server.say('{}BOT组:{}内无BOT'.format(PluginPrefix, groupName))
+        return
+    for var in getGroupAllBotInfo(groupName):
+        server.execute('player {} kill'.format(var['name']))
+        server.say('{}BOT:{}已经下线'.format(PluginPrefix, var['name']))
+    server.say('{}BOT组:{}已经下线'.format(PluginPrefix, groupName))
+
+
+# check AutoBotFolders and create folders when load/reload the plugin
+def on_load(server, old):
+    # help message register
+    server.add_help_message('!!bot', '查看自动放置BOT的帮助')
+    if not pathlib.Path(AutoBotFolder).exists():
+        pathlib.Path(AutoBotFolder).mkdir()
+    if not pathlib.Path(AutoBotGroupFolder).exists():
+        pathlib.Path(AutoBotGroupFolder).mkdir()
+
+
+# command register
 def on_info(server, info):
     if info.is_player:
         if info.content.startswith('!!bot'):
@@ -33,315 +348,71 @@ def on_info(server, info):
             cmdLen = len(cmdList)
             if cmdLen == 1:
                 for line in helpmsg.splitlines():
-                    server.tell(info.player, line)
-            if cmdLen == 2 and cmdList[1] == 'list':
-                list = getBotList()
-                for bot in list:
-                    server.reply(info, bot)
-            if cmdLen == 2 and cmdList[1] == 'glist':
-                list = getGroupList()
-                for group in list:
-                    server.reply(info, group)
-            if cmdLen == 3 and cmdList[1] == 'info':
-                name = cmdList[2]
-                if name in getBotList():
-                    botInfo = getBotInfo(name)
-                    server.reply(info, 'BOT名字:' + botInfo['name'] + '\nBOT坐标:' + botInfo['pos'] + '\nBOT世界:' + botInfo[
-                        'world'] + '\nBOT备注:' + botInfo['detail'])
-                elif name in getGroupList():
-                    groupInfo = getGroupInfo(name)
-                    groupBotList = getGroupBotList(name)
-                    server.reply(info, '组名字:' + name + '\n组备注:' + groupInfo['detail'])
-                    server.reply(info, '组BOT列表:')
-                    for bot in groupBotList:
-                        server.reply(info, bot.split('.', 1)[0])
-                else:
-                    server.reply(info, '该BOT不存在，获取信息失败')
-            if (cmdLen == 7 or cmdLen == 8) and (cmdList[1] == 'add' or cmdList[1] == 'radd'):
-                # BOT名字, 坐标， 世界名字检测
-                name = cmdList[2]
-                posX = cmdList[3]
-                posY = cmdList[4]
-                posZ = cmdList[5]
-                world = cmdList[6]
-                if cmdLen == 8:
-                    detail = cmdList[7]
-                if not botNameCheck(name):
-                    server.reply(info, 'BOT名字不符合规范，添加失败。请使用bot_, farm_, p_前缀, 长度保持在16以下')
-                elif (name in getBotList()) and (cmdList[1] == 'add'):
-                    server.reply(info, '该BOT已存在，添加失败。请使用!!bot radd覆盖原有BOT')
-                elif (name not in getBotList()) or cmdList[1] == 'radd':
-                    if posCheck(posX, posY, posZ):
-                        pos = posX + ' ' + posY + ' ' + posZ
-                        if worldCheck(world):
-                            if cmdLen == 8:
-                                addFullBot(name, pos, world, detail)
-                            else:
-                                addBot(name, pos, world)
-                            server.reply(info, 'BOT:' + name + '添加成功')
-                        else:
-                            server.reply(info, '世界名字不符合规范，添加失败。请使用overworld， nether， end作为世界名字')
-                    else:
-                        server.reply(info, '坐标不符合规范，添加失败。请添加整数坐标')
+                    server.reply(info, line)
+            # !!bot add
+            if (cmdLen == 7 or cmdLen == 8) and cmdList[1] == 'add':
+                if addBotCheck(cmdList[2], cmdList[3], cmdList[4], cmdList[5], cmdList[6], server, info):
+                    if cmdLen == 7:
+                        addBot(cmdList[2], '{} {} {}'.format(cmdList[3], cmdList[4], cmdList[5]), cmdList[6], '空',
+                               server, info)
+                    if cmdLen == 8:
+                        addBot(cmdList[2], '{} {} {}'.format(cmdList[3], cmdList[4], cmdList[5]), cmdList[6],
+                               cmdList[7], server, info)
+            # !!bot del <bot>
             if cmdLen == 3 and cmdList[1] == 'del':
-                name = cmdList[2]
-                if botNameCheck(name):
-                    if name in getBotList():
-                        delBot(name)
-                        server.reply(info, 'BOT:' + name + '删除成功')
-                    else:
-                        server.reply(info, '未找到该BOT，请检查BOT名字')
+                delBot(cmdList[2], server, info)
+            # !!bot rename <bot/group>
+            if cmdLen == 4 and cmdList[1] == 'rename':
+                if cmdList[2] in getBotList():
+                    renameBot(cmdList[2], cmdList[3], server, info)
+                elif cmdList[2] in getGroupList():
+                    renameGroup(cmdList[2], cmdList[3], server, info)
                 else:
-                    server.reply(info, 'BOT名字不符合规范，删除失败。请使用bot_, farm_, p_前缀, 长度保持在16以下')
-            if (cmdLen == 3 or cmdLen == 4) and cmdList[1] == 'addgroup':
-                name = cmdList[2]
-                if cmdLen == 4:
-                    detail = cmdList[3]
-                if name in getGroupList():
-                    server.reply(info, '已存在该组， 添加失败')
-                if cmdLen == 3 and name not in getGroupList():
-                    addGroup(name)
-                    server.reply(info, 'BOT组:' + name + '建立成功')
-                if cmdLen == 4 and name not in getGroupList():
-                    addFullGroup(name, detail)
-                    server.reply(info, 'BOT组:' + name + '建立成功')
-            if cmdLen == 3 and cmdList[1] == 'delgroup':
-                name = cmdList[2]
-                if name in getGroupList():
-                    delGroup(name)
-                    server.reply(info, 'BOT组:' + name + '删除成功')
+                    server.reply(info, '{}未找到该BOT/BOT组'.format(PluginPrefix))
+            # !!bot info <bot/group bot>
+            if (cmdLen == 3 or cmdLen == 4) and cmdList[1] == 'info':
+                if cmdLen == 3 and cmdList[2] in getBotList():
+                    printBotInfo(cmdList[2], server, info)
+                elif cmdLen == 4 and cmdList[2] in getGroupList() and cmdList[3] in getBotListInGroup(cmdList[2]):
+                    printGroupBotInfo(cmdList[2], cmdList[3], server, info)
                 else:
-                    server.reply(info, '未找到该BOT组，删除失败')
+                    server.reply(info, '{}未找到该BOT'.format(PluginPrefix))
+            # !!bot list
+            if (cmdLen == 2 or cmdLen == 3) and cmdList[1] == 'list':
+                if cmdLen == 2:
+                    printBotList(server, info)
+                elif cmdLen == 3 and cmdList[2] in getGroupList():
+                    printBotListInGroup(cmdList[2], server, info)
+                else:
+                    server.reply(info, '{}未找到该BOT组'.format(PluginPrefix))
+            # !!bot glist
+            if cmdLen == 2 and cmdList[1] == 'glist':
+                printGroupList(server, info)
+            # !!bot gadd
             if cmdLen == 4 and cmdList[1] == 'gadd':
-                botName = cmdList[2]
-                groupName = cmdList[3]
-                if botName in getBotList():
-                    if groupName in getGroupList():
-                        addBotToGroup(botName, groupName)
-                        server.reply(info, '已将BOT:' + botName + '添加至组:' + groupName)
-                    else:
-                        server.reply(info, '未找到该BOT组，添加失败')
-                else:
-                    server.reply(info, '未找到该BOT，添加失败')
+                addBotToGroup(cmdList[2], cmdList[3], server, info)
+            # !!bot gdel
             if cmdLen == 4 and cmdList[1] == 'gdel':
-                botName = cmdList[2] + '.json'
-                groupName = cmdList[3]
-                if botName in getGroupBotList(groupName):
-                    if groupName in getGroupList():
-                        delBotFromGroup(botName, groupName)
-                        server.reply(info, '已将BOT:' + cmdList[2] + '从组:' + groupName + '移除')
-                    else:
-                        server.reply(info, '未找到该BOT组，删除失败')
-                else:
-                    server.reply(info, '未找到该BOT，删除失败')
+                delBotFromGroup(cmdList[2], cmdList[3], server, info)
+            # !!bot addgroup <group>
+            if cmdLen == 3 and cmdList[1] == 'addgroup':
+                addGroup(cmdList[2], server, info)
+            # !!bot delgroup <group>
+            if cmdLen == 3 and cmdList[1] == 'delgroup':
+                delGroup(cmdList[2], server, info)
+            # !!bot <bot/group>
             if cmdLen == 2:
-                name = cmdList[1]
-                if name in getBotList():
-                    if botNameCheck(name):
-                        spawnBot(name, server)
-                    else:
-                        pass
-                if name in getGroupList():
-                    spawnGroupBot(name, server)
-                else:
-                    pass
-                # if name not in getBotList() and name not in getGroupList():
-                #     server.reply(info, '未找到BOT/BOT组，部署失败')
+                if cmdList[1] in getBotList():
+                    spawnBot(cmdList[1], server)
+                elif cmdList[1] in getGroupList():
+                    spawnGroupBot(cmdList[1], server)
+                # else:
+                #     server.reply(info, '{}未找到该BOT/BOT组'.format(PluginPrefix))
+            # !!bot kill <bot/group>
             if cmdLen == 3 and cmdList[1] == 'kill':
-                name = cmdList[2]
-                if name in getBotList():
-                    if botNameCheck(name):
-                        killBot(name, server)
-                    else:
-                        pass
-                if name in getGroupList():
-                    killGroupBot(name, server)
-                if name not in getBotList() and name not in getGroupList():
-                    server.reply(info, '未找到BOT/BOT组，下线失败')
-
-
-def on_load(server, old_module):
-    server.add_help_message('!!bot', '显示自动放置BOT插件的帮助信息')
-    if not os.path.exists(AutoBotFolder):
-        os.mkdir(AutoBotFolder)
-    if not os.path.exists(AutoBotGroupFolder):
-        os.mkdir(AutoBotGroupFolder)
-
-
-def on_server_startup(server):
-    if 'peace' in getGroupList() and 'p_main' in getGroupList():
-        spawnGroupBot('peace', server)
-        spawnGroupBot('p_main', server)
-    else:
-        pass
-
-
-def spawnBot(name, server):
-    botInfo = getBotInfo(name)
-    name = botInfo['name']
-    pos = botInfo['pos']
-    world = botInfo['world']
-    cmdSpawnBot = 'player ' + name + ' spawn at ' + pos + ' facing ~ ~ in ' + world
-    server.execute(cmdSpawnBot)
-    server.say('BOT:' + name + '已经部署')
-
-
-def spawnGroupBot(name, server):
-    botList = getGroupBotList(name)
-    groupName = name
-    for bot in botList:
-        botInfo = getGroupBotInfo(groupName, bot)
-        name = botInfo['name']
-        pos = botInfo['pos']
-        world = botInfo['world']
-        cmdSpawnBot = 'player ' + name + ' spawn at ' + pos + ' facing ~ ~ in ' + world
-        server.execute(cmdSpawnBot)
-        server.say('BOT:' + name + '已经部署')
-    server.say('BOT组:' + groupName + '已经部署')
-
-
-def killBot(name, server):
-    botInfo = getBotInfo(name)
-    name = botInfo['name']
-    cmdKillBot = 'player ' + name + ' kill'
-    server.execute(cmdKillBot)
-    server.say('BOT:' + name + '已经下线')
-
-
-def killGroupBot(name, server):
-    botList = getGroupBotList(name)
-    groupName = name
-    for bot in botList:
-        botInfo = getGroupBotInfo(groupName, bot)
-        name = botInfo['name']
-        cmdKillBot = 'player ' + name + ' kill'
-        server.execute(cmdKillBot)
-        server.say('BOT:' + name + '已经下线')
-
-
-def addBot(name, pos, world):
-    if world == 'overworld' or world == 'nether' or world == 'end':
-        if world == 'overworld':
-            world = 'minecraft:' + world
-        else:
-            world = 'minecraft:the_' + world
-    dict = {'name': name, 'pos': pos, 'world': world, 'detail': '空'}
-    with open(AutoBotFolder + '\\' + name + '.json', 'w') as f:
-        f.write(json.dumps(dict))
-
-
-def addFullBot(name, pos, world, detail):
-    dict = {'name': name, 'pos': pos, 'world': world, 'detail': detail}
-    with open(AutoBotFolder + '\\' + name + '.json', 'w') as f:
-        f.write(json.dumps(dict))
-
-
-def delBot(name):
-    if name in getBotList():
-        os.remove(AutoBotFolder + '\\' + name + '.json')
-
-
-def getBotList():
-    botList = []
-    dirs = os.listdir(AutoBotFolder)
-    for bot in dirs:
-        if bot == 'group':
-            pass
-        else:
-            botList.append(bot.split('.', 1)[0])
-    return botList
-
-
-def getGroupBotList(name):
-    groupBotList = []
-    dirs = os.listdir(AutoBotGroupFolder + '\\' + name + '\\')
-    for bot in dirs:
-        if bot == 'info.json':
-            pass
-        else:
-            groupBotList.append(bot)
-    return groupBotList
-
-
-def addGroup(name):
-    thisGroupFolder = AutoBotGroupFolder + '\\' + name
-    if not os.path.exists(thisGroupFolder):
-        os.mkdir(thisGroupFolder)
-        dict = {'detail': '空'}
-        with open(thisGroupFolder + '\\' + 'info.json', 'w') as f:
-            f.write(json.dumps(dict))
-
-
-def addFullGroup(name, detail):
-    thisGroupFolder = AutoBotGroupFolder + '\\' + name
-    if not os.path.exists(thisGroupFolder):
-        os.mkdir(thisGroupFolder)
-        dict = {'detail': detail}
-        with open(thisGroupFolder + '\\' + 'info.json', 'w') as f:
-            f.write(json.dumps(dict))
-
-
-def delGroup(name):
-    shutil.rmtree(AutoBotGroupFolder + '\\' + name)
-
-
-def addBotToGroup(botName, groupName):
-    shutil.move(AutoBotFolder + '\\' + botName + '.json', AutoBotGroupFolder + '\\' + groupName + '\\')
-
-
-def delBotFromGroup(botName, groupName):
-    shutil.move(AutoBotGroupFolder + '\\' + groupName + '\\' + botName, AutoBotFolder + '\\')
-
-
-def getGroupList():
-    groupList = []
-    dirs = os.listdir(AutoBotGroupFolder)
-    for file in dirs:
-        groupList.append(file)
-    return groupList
-
-
-def getBotInfo(name):
-    with open(AutoBotFolder + '\\' + name + '.json', 'r') as f:
-        botInfo = json.loads(f.read())
-        return botInfo
-
-
-def getGroupBotInfo(groupName, botName):
-    with open(AutoBotGroupFolder + '\\' + groupName + '\\' + botName, 'r') as f:
-        groupBotInfo = json.loads(f.read())
-        return groupBotInfo
-
-
-def getGroupInfo(name):
-    with open(AutoBotGroupFolder + '\\' + name + '\\' + 'info.json', 'r') as f:
-        groupInfo = json.loads(f.read())
-        return groupInfo
-
-
-def botNameCheck(name):
-    if name.find('_') == -1 or name.find('.') != -1:
-        return False
-    else:
-        botNameWhiteList = ['bot', 'farm', 'p', 'peace']
-        if len(name) <= 16:
-            return name.split('_', 1)[0] in botNameWhiteList
-        else:
-            return False
-
-
-def posCheck(posX, posY, posZ):
-        try:
-            a = int(posX)
-            a = int(posY)
-            a = int(posZ)
-            return True
-        except ValueError:
-            return False
-
-
-def worldCheck(world):
-    if world == 'overworld' or world == 'nether' or world == 'end':
-        return True
-    else:
-        return False
+                if cmdList[2] in getBotList():
+                    killBot(cmdList[2], server)
+                elif cmdList[2] in getGroupList():
+                    killGroupBot(cmdList[2], server)
+                else:
+                    server.reply(info, '{}未找到该BOT/BOT组'.format(PluginPrefix))
