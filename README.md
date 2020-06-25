@@ -1,13 +1,12 @@
 # AutoBot -仅在Win10通过测试！-
 A plugin for MCDR to spawn BOT/BOTS
 用来生成BOT或批量生成BOT的插件
-!!Carpet模组需要并且打开commandPlayer!!
+# !!Carpet模组需要并且打开commandPlayer!!
 -----------------------------------------------------------------------------------------
 	!!bot -显示帮助消息
 	!!bot add <BOT名字> <X坐标> <Y坐标> <Z坐标> <世界> <备注> -添加BOT到BOT列表
 	注：名字必须为bot_, farm_, p_, 开头, 坐标为整数，世界为overworld, nether, end, 三者之一
 	!!bot del <BOT名字>
-	!!bot radd -覆盖已有BOT 参数需完全覆盖
 	!!bot addgroup <组名字> <备注>-添加BOT组
 	!!bot delgroup <组名字> -移除BOT组
 	!!bot gadd <BOT名字> <组名字> -添加BOT至BOT组
