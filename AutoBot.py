@@ -8,6 +8,10 @@ import pathlib
 # Carpet Mod needed and function CommandPlayer must be on!
 # Author: MercyNaima
 
+# function: Kick bot with incorrect botPrefix default:[False]
+AutoKickUnPrefixBot = False
+# A whitelist for necessary bot
+unPrefixNameWhiteList = ['Alex', 'Steve']
 botPrefix = ['bot', 'farm', 'peace', 'p']
 AutoBotFolder = './AutoBot'
 AutoBotGroupFolder = AutoBotFolder + '\\group'
@@ -18,7 +22,7 @@ helpmsg = '''§d------MCDR [AutoBot]插件------§r
 命令帮助如下:
 §d!!bot§r -§e显示帮助消息
 §d!!bot§r §aadd§r §8<BOT名字> <X坐标> <Y坐标> <Z坐标> <世界> <备注> -§e添加BOT到BOT列表§r
-注：名字必须为bot_, farm_, p_, 开头, 坐标为整数，世界为overworld, nether, end, 三者之一
+注：名字必须为{}{}, 开头, 坐标为整数，世界为overworld, nether, end, 三者之一
 §d!!bot§r §adel§r §8<BOT名字>§r -§e从BOT列表删除BOT§r
 §d!!bot§r §arename§r §8<BOT名字/BOT组名字> <目标名字>§r -§e重命名BOT/BOT组§r
 §d!!bot§r §aaddgroup§r §8<BOT组名字>§r -§e添加BOT组§r
@@ -30,7 +34,7 @@ helpmsg = '''§d------MCDR [AutoBot]插件------§r
 §d!!bot§r §ainfo§r §8<BOT名字>/<BOT组名字> <BOT名字>§r -§e查看BOT/BOT组信息§r
 §d!!bot§r §8<BOT名字/BOT组名字>§r -§e部署BOT/BOT组§r
 §d!!bot§r §akill§r §8<BOT名字/BOT组名字>§r -§e下线BOT/BOT组§r
-§d--------------------------------§r'''
+§d--------------------------------§r'''.format(botPrefix, '加下划线')
 
 
 # get BotList with .json
@@ -91,7 +95,7 @@ def printGroupList(server, info):
     server.reply(info, '{}BOT组列表如下:'.format(PluginPrefix))
     server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
     for var in getGroupList():
-        server.reply(info, '{}{}'.format(PluginPrefix, var))
+        server.reply(info, '{}§a{}§r'.format(PluginPrefix, var))
     server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
 
 
@@ -100,7 +104,7 @@ def printBotListInGroup(groupName, server, info):
     server.reply(info, '{}BOT组:{}中BOT列表如下:'.format(PluginPrefix, groupName))
     server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
     for var in getBotListInGroup(groupName):
-        server.reply(info, '{}{}'.format(PluginPrefix, var))
+        server.reply(info, '{}§a{}§r'.format(PluginPrefix, var))
     server.reply(info, '{}§d-------------------------§r'.format(PluginPrefix))
 
 
@@ -196,9 +200,9 @@ def addBot(botName, pos, world, detail, server, info):
 def addGroup(groupName, server, info):
     try:
         pathlib.Path('{}\\{}'.format(AutoBotGroupFolder, groupName)).mkdir()
-        server.reply(info, '{}BOT组:{}创建成功'.format(PluginPrefix, groupName))
+        server.reply(info, '{}BOT组:§a{}§r创建成功'.format(PluginPrefix, groupName))
     except FileExistsError:
-        server.reply(info, '{}已存在BOT组:{}'.format(PluginPrefix, groupName))
+        server.reply(info, '{}已存在BOT组:§a{}§r'.format(PluginPrefix, groupName))
         return
 
 
@@ -211,14 +215,14 @@ def addBotToGroup(botName, groupName, server, info):
         server.reply(info, '{}未找到该BOT组'.format(PluginPrefix))
         return
     shutil.move('{}\\{}.json'.format(AutoBotFolder, botName), '{}\\{}\\'.format(AutoBotGroupFolder, groupName))
-    server.reply(info, '{}已将BOT:{}移动至组:{}'.format(PluginPrefix, botName, groupName))
+    server.reply(info, '{}已将BOT:§a{}§r移动至组:§a{}§r'.format(PluginPrefix, botName, groupName))
 
 
 # del bot from AutoBotFolder
 def delBot(botName, server, info):
     try:
         pathlib.Path('{}\\{}.json'.format(AutoBotFolder, botName)).unlink()
-        server.reply(info, '{}BOT:{}删除成功'.format(PluginPrefix, botName))
+        server.reply(info, '{}BOT:§a{}§r删除成功'.format(PluginPrefix, botName))
     except FileNotFoundError:
         server.reply(info, '{}未找到该BOT'.format(PluginPrefix))
         return
@@ -228,9 +232,9 @@ def delBot(botName, server, info):
 def delGroup(groupName, server, info):
     try:
         shutil.rmtree('{}\\{}'.format(AutoBotGroupFolder, groupName))
-        server.reply(info, '{}BOT组:{}删除成功'.format(PluginPrefix, groupName))
+        server.reply(info, '{}BOT组:§a{}§r删除成功'.format(PluginPrefix, groupName))
     except FileNotFoundError:
-        server.reply(info, '{}未找到BOT组:{}'.format(PluginPrefix, groupName))
+        server.reply(info, '{}未找到BOT组:§a{}§r'.format(PluginPrefix, groupName))
 
 
 # del bot from group
@@ -242,7 +246,7 @@ def delBotFromGroup(botName, groupName, server, info):
         server.reply(info, '{}未找到该BOT'.format(PluginPrefix))
         return
     shutil.move('{}\\{}\\{}.json'.format(AutoBotGroupFolder, groupName, botName), '{}\\'.format(AutoBotFolder))
-    server.reply(info, '{}已将BOT:{}从组:{}移除'.format(PluginPrefix, botName, groupName))
+    server.reply(info, '{}已将BOT:§a{}§r从组:§a{}§r移除'.format(PluginPrefix, botName, groupName))
 
 
 # rename a group which in AutoBotGroupFolder
@@ -253,7 +257,7 @@ def renameGroup(originGroupName, targetGroupName, server, info):
     try:
         os.rename('{}\\{}'.format(AutoBotGroupFolder, originGroupName),
                   '{}\\{}'.format(AutoBotGroupFolder, targetGroupName))
-        server.reply(info, '{}已将BOT组:{}重命名为:{}'.format(PluginPrefix, originGroupName, targetGroupName))
+        server.reply(info, '{}已将BOT组:§a{}§r重命名为:§a{}§r'.format(PluginPrefix, originGroupName, targetGroupName))
     except OSError:
         server.reply(info, '{}该BOT组不存在'.format(PluginPrefix))
 
@@ -270,7 +274,7 @@ def renameBot(originBotName, targetBotName, server, info):
     with pathlib.Path('{}\\{}.json'.format(AutoBotFolder, targetBotName)).open('w') as f:
         f.write(json.dumps(newBot))
     pathlib.Path('{}\\{}.json'.format(AutoBotFolder, originBotName)).unlink()
-    server.reply(info, '{}已将BOT:{}重命名为:{}'.format(PluginPrefix, originBotName, targetBotName))
+    server.reply(info, '{}已将BOT:§a{}§r重命名为:§a{}§r'.format(PluginPrefix, originBotName, targetBotName))
 
 
 # return a dict with botInfo
@@ -299,35 +303,46 @@ def getGroupAllBotInfo(groupName):
 def spawnBot(botName, server):
     botInfo = getBotInfo(botName)
     server.execute('player {} spawn at {} facing ~ ~ in {}'.format(botInfo['name'], botInfo['pos'], botInfo['world']))
-    server.say('{}BOT:{}已经部署'.format(PluginPrefix, botName))
+    server.say('{}BOT:§a{}§r已经部署'.format(PluginPrefix, botName))
 
 
 # spawn a group of bot in game
 def spawnGroupBot(groupName, server):
     if len(getBotListInGroup(groupName)) == 0:
-        server.say('{}BOT组:{}内无BOT'.format(PluginPrefix, groupName))
+        server.say('{}BOT组:§a{}§r内无BOT'.format(PluginPrefix, groupName))
         return
     for var in getGroupAllBotInfo(groupName):
         server.execute('player {} spawn at {} facing ~ ~ in {}'.format(var['name'], var['pos'], var['world']))
-        server.say('{}BOT:{}已经部署'.format(PluginPrefix, var['name']))
-    server.say('{}BOT组:{}已经部署'.format(PluginPrefix, groupName))
+        server.say('{}BOT:§a{}§r已经部署'.format(PluginPrefix, var['name']))
+    server.say('{}BOT组:§a{}§r已经部署'.format(PluginPrefix, groupName))
 
 
 # kill a bot in game
 def killBot(botName, server):
     server.execute('player {} kill'.format(botName))
-    server.say('{}BOT:{}已经下线'.format(PluginPrefix, botName))
+    server.say('{}BOT:§a{}§r已经下线'.format(PluginPrefix, botName))
 
 
 # kill a group of bot in game
 def killGroupBot(groupName, server):
     if len(getBotListInGroup(groupName)) == 0:
-        server.say('{}BOT组:{}内无BOT'.format(PluginPrefix, groupName))
+        server.say('{}BOT组:§a{}§r内无BOT'.format(PluginPrefix, groupName))
         return
     for var in getGroupAllBotInfo(groupName):
         server.execute('player {} kill'.format(var['name']))
-        server.say('{}BOT:{}已经下线'.format(PluginPrefix, var['name']))
-    server.say('{}BOT组:{}已经下线'.format(PluginPrefix, groupName))
+        server.say('{}BOT:§a{}§r已经下线'.format(PluginPrefix, var['name']))
+    server.say('{}BOT组:§a{}§r已经下线'.format(PluginPrefix, groupName))
+
+
+def kickBot(botName, server):
+    server.execute('kill {}'.format(botName))
+    server.say('{}BOT:§a{}§r不符合命名规则，强制踢出'.format(PluginPrefix, botName))
+
+
+# spawn bot group peace when game on
+def on_server_startup(server):
+    if 'peace' in getGroupList():
+        spawnGroupBot('peace', server)
 
 
 # check AutoBotFolders and create folders when load/reload the plugin
@@ -340,8 +355,20 @@ def on_load(server, old):
         pathlib.Path(AutoBotGroupFolder).mkdir()
 
 
-# command register
 def on_info(server, info):
+    # change a bot`s gamemode to survival
+    if not info.is_player and info.content.find('[local] logged in') != -1:
+        botName = info.content.split('[')[0]
+        # function: Kick bot
+        if AutoKickUnPrefixBot:
+            if botName.find('_') == -1 and botName not in unPrefixNameWhiteList:
+                kickBot(botName, server)
+            else:
+                if botName.split('_')[0] not in botPrefix and botName not in unPrefixNameWhiteList:
+                    kickBot(botName, server)
+        server.execute('gamemode survival {}'.format(botName))
+
+    # command register
     if info.is_player:
         if info.content.startswith('!!bot'):
             cmdList = info.content.split(' ')
